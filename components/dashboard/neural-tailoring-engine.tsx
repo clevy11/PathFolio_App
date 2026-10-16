@@ -31,8 +31,26 @@ export function NeuralTailoringEngine() {
   };
 
   return (
-    <div className="glass-panel rounded-2xl p-6">
-      <div className="flex items-center justify-between mb-5">
+    <div className="glass-panel p-6 animate-fade-in">
+      <style jsx>{`
+        .pulse-dot {
+          position: relative;
+        }
+        .pulse-dot::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          border-radius: 50%;
+          border: 1px solid #34d399;
+          animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+        @keyframes pulse-ring {
+          0% { transform: scale(0.9); opacity: 0.8; }
+          100% { transform: scale(1.6); opacity: 0; }
+        }
+      `}</style>
+
+      <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
             <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -62,7 +80,7 @@ export function NeuralTailoringEngine() {
             placeholder="Paste the full job description here... (requirements, responsibilities, tech stack, etc.)"
             rows={6}
             className={cn(
-              'w-full bg-navy-800/50 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-transparent transition-all resize-none',
+              'w-full bg-navy-800/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/50 focus:border-transparent transition-all resize-none',
               'font-mono text-sm'
             )}
           />
@@ -90,14 +108,14 @@ export function NeuralTailoringEngine() {
       </div>
 
       {result && (
-        <div className="mt-6 space-y-4">
+        <div className="mt-6 space-y-4 animate-slide-up">
           <div className="flex items-center gap-2 border-b border-white/10">
             {(['cv', 'cover'] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 className={cn(
-                  'px-4 py-2 text-sm font-medium rounded-t-lg transition-colors',
+                  'px-4 py-2 text-sm font-medium rounded-t-xl transition-colors',
                   activeTab === tab
                     ? 'bg-white/5 text-white border-b-2 border-emerald-400'
                     : 'text-slate-400 hover:text-white'
@@ -107,7 +125,7 @@ export function NeuralTailoringEngine() {
               </button>
             ))}
           </div>
-          <div className="bg-navy-800/50 border border-white/10 rounded-lg p-4 font-mono text-sm whitespace-pre-wrap max-h-96 overflow-y-auto">
+          <div className="bg-navy-800/50 border border-white/10 rounded-xl p-4 font-mono text-sm whitespace-pre-wrap max-h-96 overflow-y-auto">
             {activeTab === 'cv' ? result.cv : result.coverLetter}
           </div>
           <div className="flex gap-3">
@@ -121,24 +139,5 @@ export function NeuralTailoringEngine() {
         </div>
       )}
     </div>
-  );
-}
-
-function pulseDot() {
-  return (
-    <style jsx>{`
-      .pulse-dot::before {
-        content: '';
-        position: absolute;
-        inset: 0;
-        border-radius: 50%;
-        border: 1px solid #34d399;
-        animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
-      }
-      @keyframes pulse-ring {
-        0% { transform: scale(0.9); opacity: 0.8; }
-        100% { transform: scale(1.6); opacity: 0; }
-      }
-    `}</style>
   );
 }

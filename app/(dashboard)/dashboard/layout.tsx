@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils/cn';
 const navigation = [
   { name: 'Mission Control', href: '/dashboard', icon: 'squares-four' },
   { name: 'Applications', href: '/dashboard/applications', icon: 'briefcase' },
-  { name: 'CV Vault', href: '/dashboard/cv-vault', icon: 'file-text' },
+  { name: 'CV Vault', href: '/profile', icon: 'file-text' },
   { name: 'Interviews', href: '/dashboard/interviews', icon: 'calendar-blank' },
   { name: 'Analytics', href: '/dashboard/analytics', icon: 'chart-line-up' },
 ];
@@ -19,19 +19,17 @@ const navigationIcons: Record<string, JSX.Element> = {
 };
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
-  const path = typeof window !== 'undefined' ? window.location.pathname : '/dashboard';
-
   return (
-    <div className="flex min-h-screen bg-navy-900 text-white font-sans antialiased">
-      <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
-        @import url('https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/*');
-      `}</style>
+    <div className="flex min-h-screen bg-navy-900 text-white font-sans antialiased relative">
+      {/* Ambient background glows */}
+      <div className="fixed top-[-20%] left-[-10%] w-[50vw] h-[50vw] bg-emerald-900/10 rounded-full blur-[120px] pointer-events-none z-0" />
+      <div className="fixed bottom-[-20%] right-[-10%] w-[50vw] h-[50vw] bg-azure-900/10 rounded-full blur-[120px] pointer-events-none z-0" />
+      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60vw] h-[60vw] bg-emerald-900/5 rounded-full blur-[150px] pointer-events-none z-0" />
 
       <aside className="w-64 hidden lg:flex flex-col border-r border-white/5 bg-navy-900/50 backdrop-blur-md shrink-0 z-10">
         <div className="h-20 flex items-center px-6 border-b border-white/5">
           <Link href="/dashboard" className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-400 to-azure-500 flex items-center justify-center shadow-[0_0_20px_rgba(74,222,128,0.5)]">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-400 to-azure-500 flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.5)]">
               <svg className="w-5 h-5 text-navy-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
@@ -41,33 +39,28 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         </div>
 
         <nav className="flex-1 px-4 py-6 space-y-1">
-          {navigation.map((item) => {
-            const isActive = path === item.href || (item.href !== '/dashboard' && path.startsWith(item.href));
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={cn(
-                  'flex items-center gap-3 px-4 py-3 rounded-xl transition-colors',
-                  isActive
-                    ? 'bg-white/5 border border-white/10 text-white'
-                    : 'text-slate-400 hover:text-white hover:bg-white/5'
-                )}
-              >
-                {navigationIcons[item.icon] || (
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                  </svg>
-                )}
-                <span className="font-medium">{item.name}</span>
-              </Link>
-            );
-          })}
+          {navigation.map((item) => (
+            <Link
+              key={item.name}
+              href={item.href}
+              className={cn(
+                'flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200',
+                'hover:bg-white/5 hover:text-white'
+              )}
+            >
+              {navigationIcons[item.icon] || (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+              )}
+              <span className="font-medium">{item.name}</span>
+            </Link>
+          ))}
         </nav>
 
         <div className="p-4 border-t border-white/5">
-          <div className="glass-panel rounded-2xl p-4 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/20 blur-xl rounded-full" />
+          <div className="glass-panel p-4 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/10 blur-xl rounded-full" />
             <p className="text-xs text-slate-400 mb-2">Pro Plan</p>
             <p className="text-sm font-medium mb-3">Unlimited AI tailoring</p>
             <button className="w-full py-2 rounded-lg bg-white/5 border border-white/10 text-xs font-medium hover:bg-white/10 transition-colors">
@@ -93,8 +86,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <p className="text-xs text-slate-500">Your job application command center</p>
           </div>
           <div className="flex items-center gap-4">
-            <Link href="/profile" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-500 text-navy-900 text-sm font-semibold hover:bg-emerald-400 transition-colors shadow-[0_0_20px_rgba(16,185,129,0.3)]">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <Link href="/profile" className="btn-primary">
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
               New Mission

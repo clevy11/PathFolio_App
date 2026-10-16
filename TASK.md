@@ -6,7 +6,7 @@ items done and add anything discovered mid-process.
 ## Status
 
 - **Current phase:** Phase 1 — Master profile + paste JD → tailored CV/cover letter
-- **In progress:** CV upload + parse (pdf-parse, mammoth, docx) into editable sections (US-01)
+- **In progress:** Reusable saved answers CRUD (US-02)
 - **Blocked:** none
 
 ## Key decisions
@@ -32,8 +32,8 @@ items done and add anything discovered mid-process.
       ESLint/Prettier, Vitest, folder layout `app/` `components/` `lib/` `tests/`, `.env.example`)
 - [x] Postgres schema + Drizzle migrations for `profile`, `opportunity`,
       `application`, `document`, `checklist_item`, `reminder`
-- [ ] CV upload + parse (pdf-parse, mammoth, docx) into editable sections (US-01)
-- [ ] Master profile CRUD (US-01)
+- [x] CV upload + parse (pdf-parse, mammoth, docx) into editable sections (US-01)
+- [x] Master profile CRUD (US-01)
 - [ ] Reusable saved answers CRUD (US-02)
 - [ ] OpenRouter client wrapper + prompt/version handling
 - [ ] Paste a job description → tailored CV from master profile only (US-06)
@@ -85,3 +85,7 @@ items done and add anything discovered mid-process.
 - 2026-10-10 — Task 2: Docs edit pass complete — updated README.md (repo URL, author, OpenRouter, Next.js 15), PLANNING.md (Next.js 15, Vercel Postgres, Playwright local-only, OpenRouter), TASK.md (key decisions + Phase 1 scaffolding), AGENTS.md (server/client boundary, Drizzle, Vercel, Playwright env flag, OpenRouter), LICENSE (author "Caleb levy Buntu").
 - 2026-10-10 — Task 3: Phase 1 scaffolding complete — Next.js 15 + React 18 + TypeScript + Tailwind + shadcn/ui (Button, Card) + Drizzle ORM schema + OpenRouter LLM wrapper + Zod validation + Vitest + ESLint/Prettier + folder layout (`app/`, `components/`, `lib/`, `tests/`) + `.env.example`. Tests pass (6/6), lint passes, typecheck passes.
 - 2026-10-10 — Task 4: Drizzle migrations applied — 6 tables created in Vercel Postgres (`fullstack`): `profile`, `opportunity`, `application`, `document`, `checklist_item`, `reminder` with enums, FKs, indexes.
+- 2026-10-10 — Task 5: CV upload + parse (pdf-parse, mammoth, docx) with section extraction → auto-fill profile form.
+- 2026-10-10 — Task 6: Master profile CRUD (US-01) — tabbed editor (Overview, Skills, Experience, Education, Projects, Links) with inline add/edit/remove.
+- 2026-10-10 — Task 7: Neural Tailoring Engine — paste JD → generate tailored CV & cover letter via OpenRouter (Claude 3.5 Sonnet), tabbed preview with copy/save.
+- 2026-10-10 — Task 8: Dashboard (Mission Control) — stats cards (Match Index, Active Applications, Interview Pulse), recent activity feed, quick actions. Dark navy/glass theme per OrbitalJob inspiration.

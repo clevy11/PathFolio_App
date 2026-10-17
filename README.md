@@ -71,7 +71,7 @@ These are enforced in code, not just intent:
 
 | Area | Choice |
 | --- | --- |
-| App | Next.js 15 (App Router), React 19, TypeScript |
+| App | Next.js 15 (App Router), React 18, TypeScript |
 | UI | Tailwind CSS + shadcn/ui |
 | Database | Postgres via Drizzle ORM (Vercel store `fullstack`) |
 | Hosting | Vercel (Postgres, serverless functions) |

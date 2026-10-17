@@ -8,7 +8,7 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   {
     plugins: {
-      next: nextPlugin,
+      '@next/next': nextPlugin,
     },
     rules: {
       ...nextPlugin.configs.recommended.rules,

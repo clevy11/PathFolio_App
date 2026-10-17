@@ -8,19 +8,19 @@ export const profileSchema = z.object({
   summary: z.string().optional(),
   skills: z.array(z.string()).default([]),
   education: z.array(z.object({
-    institution: z.string().min(1),
-    degree: z.string().min(1),
-    field: z.string().min(1),
-    startDate: z.string().min(1),
-    endDate: z.string().min(1),
+    institution: z.string(),
+    degree: z.string(),
+    field: z.string(),
+    startDate: z.string(),
+    endDate: z.string(),
     description: z.string().optional(),
   })).default([]),
   experience: z.array(z.object({
-    company: z.string().min(1),
-    role: z.string().min(1),
-    startDate: z.string().min(1),
-    endDate: z.string().min(1),
-    description: z.string().min(1),
+    company: z.string(),
+    role: z.string(),
+    startDate: z.string(),
+    endDate: z.string(),
+    description: z.string(),
     technologies: z.array(z.string()).optional(),
   })).default([]),
   projects: z.array(z.object({
@@ -47,6 +47,7 @@ export const applicationSchema = z.object({
   opportunityId: z.string().uuid(),
   method: z.enum(['email', 'form', 'guided']),
   status: z.enum(['draft', 'sent', 'interview', 'offer', 'rejected', 'withdrawn']).default('draft'),
+  dateApplied: z.string().datetime().optional(),
   contactEmail: z.string().email().optional(),
   notes: z.string().optional(),
   followUpDate: z.string().datetime().optional(),
@@ -78,9 +79,19 @@ export const reminderSchema = z.object({
   done: z.boolean().default(false),
 });
 
+export const createApplicationSchema = z.object({
+  opportunity: opportunitySchema,
+  application: applicationSchema.omit({ opportunityId: true }),
+  confirmDuplicate: z.boolean().optional(),
+});
+
+export const updateApplicationSchema = applicationSchema.omit({ opportunityId: true }).partial();
+
 export type ProfileInput = z.infer<typeof profileSchema>;
 export type OpportunityInput = z.infer<typeof opportunitySchema>;
 export type ApplicationInput = z.infer<typeof applicationSchema>;
 export type DocumentInput = z.infer<typeof documentSchema>;
 export type ChecklistItemInput = z.infer<typeof checklistItemSchema>;
 export type ReminderInput = z.infer<typeof reminderSchema>;
+export type CreateApplicationPayload = z.infer<typeof createApplicationSchema>;
+export type UpdateApplicationPayload = z.infer<typeof updateApplicationSchema>;

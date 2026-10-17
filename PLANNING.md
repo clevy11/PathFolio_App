@@ -75,7 +75,7 @@ understandable to any developer in case it is shared later.
 
 ## 8. Architecture
 
-Web-first with Next.js 15 (App Router) + React 19 + TypeScript. Modular by
+Web-first with Next.js 15 (App Router) + React 18 + TypeScript. Modular by
 feature so no file exceeds about 500 lines.
 
 ```
@@ -108,7 +108,7 @@ drizzle.config.ts
 | Part | Choice |
 | --- | --- |
 | Language | TypeScript |
-| Framework | Next.js 15 (App Router), React 19 |
+| Framework | Next.js 15 (App Router), React 18 |
 | AI | OpenRouter (LLM API for tailoring, summarizing, writing) |
 | Form filling | Guided steps (Playwright local-only via `ENABLE_PLAYWRIGHT` env flag) |
 | Reading web pages | Cheerio |

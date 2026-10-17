@@ -1,4 +1,4 @@
-import { generateText } from 'ai';
+import { generateText, type LanguageModel } from 'ai';
 import { openrouter } from '@openrouter/ai-sdk-provider';
 
 export interface LLMOptions {
@@ -18,7 +18,7 @@ export interface LLMResponse {
   };
 }
 
-const DEFAULT_MODEL = 'anthropic/claude-3.5-sonnet';
+const DEFAULT_MODEL = 'anthropic/claude-sonnet-4.6';
 const DEFAULT_TEMPERATURE = 0.3;
 const DEFAULT_MAX_TOKENS = 4000;
 
@@ -32,7 +32,7 @@ export async function callLLM(options: LLMOptions): Promise<LLMResponse> {
   } = options;
 
   const result = await generateText({
-    model: openrouter(model) as any,
+    model: openrouter(model) as LanguageModel,
     system: systemPrompt,
     prompt,
     temperature,
@@ -57,13 +57,11 @@ export function getDefaultModel(): string {
 
 export function getAvailableModels(): string[] {
   return [
-    'anthropic/claude-3.5-sonnet',
-    'anthropic/claude-3.5-haiku',
+    'anthropic/claude-sonnet-4.6',
+    'anthropic/claude-haiku-5.5',
+    'anthropic/claude-opus-4.8',
+    'openai/gpt-4.1',
     'openai/gpt-4o',
     'openai/gpt-4o-mini',
-    'google/gemini-1.5-pro',
-    'google/gemini-1.5-flash',
-    'meta-llama/llama-3.1-405b-instruct',
-    'meta-llama/llama-3.1-70b-instruct',
   ];
 }

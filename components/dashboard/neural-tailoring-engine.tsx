@@ -4,15 +4,25 @@ import { useState } from 'react';
 import { cn } from '@/lib/utils/cn';
 import { Button } from '@/components/ui/button';
 
+interface TailoredResult {
+  cv: string;
+  coverLetter: string;
+  source: string;
+}
+
 export function NeuralTailoringEngine() {
   const [jobDescription, setJobDescription] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [result, setResult] = useState<{ cv: string; coverLetter: string } | null>(null);
+  const [result, setResult] = useState<TailoredResult | null>(null);
   const [activeTab, setActiveTab] = useState<'cv' | 'cover'>('cv');
+  const [approved, setApproved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleGenerate = async () => {
     if (!jobDescription.trim()) return;
     setIsProcessing(true);
+    setError(null);
+    setApproved(false);
     try {
       const res = await fetch('/api/tailor', {
         method: 'POST',
@@ -20,13 +30,34 @@ export function NeuralTailoringEngine() {
         body: JSON.stringify({ jobDescription }),
       });
       const data = await res.json();
-      if (data.tailoredCV && data.coverLetter) {
-        setResult({ cv: data.tailoredCV, coverLetter: data.coverLetter });
+      if (!res.ok || !data.tailoredCV || !data.coverLetter) {
+        setError(data.error ?? 'Failed to generate tailored documents');
+        return;
       }
-    } catch (error) {
-      console.error('Generation failed:', error);
+      setResult({
+        cv: data.tailoredCV,
+        coverLetter: data.coverLetter,
+        source: data.source ?? '',
+      });
+    } catch (err) {
+      console.error('Generation failed:', err);
+      setError('Failed to generate tailored documents');
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  const currentText = result ? (activeTab === 'cv' ? result.cv : result.coverLetter) : '';
+
+  const handleEdit = (value: string) => {
+    if (!result) return;
+    setApproved(false);
+    setResult(activeTab === 'cv' ? { ...result, cv: value } : { ...result, coverLetter: value });
+  };
+
+  const handleCopy = () => {
+    if (currentText) {
+      void navigator.clipboard.writeText(currentText);
     }
   };
 
@@ -59,7 +90,7 @@ export function NeuralTailoringEngine() {
           </div>
           <div>
             <h2 className="font-display font-semibold text-lg">Neural Tailoring Engine</h2>
-            <p className="text-xs text-slate-500">Paste a role description · get an optimized CV & cover letter in seconds</p>
+            <p className="text-xs text-slate-500">Paste a role description · get an optimized CV &amp; cover letter in seconds</p>
           </div>
         </div>
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full glass-panel text-xs text-slate-300">
@@ -105,6 +136,8 @@ export function NeuralTailoringEngine() {
             'Generate Tailored Documents'
           )}
         </Button>
+
+        {error && <p className="text-sm text-rose-400">{error}</p>}
       </div>
 
       {result && (
@@ -125,17 +158,46 @@ export function NeuralTailoringEngine() {
               </button>
             ))}
           </div>
-          <div className="bg-navy-800/50 border border-white/10 rounded-xl p-4 font-mono text-sm whitespace-pre-wrap max-h-96 overflow-y-auto">
-            {activeTab === 'cv' ? result.cv : result.coverLetter}
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div>
+              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+                Source — your master profile
+              </p>
+              <pre className="max-h-96 overflow-y-auto whitespace-pre-wrap rounded-xl border border-white/10 bg-navy-800/50 p-4 font-mono text-xs text-slate-400">
+                {result.source}
+              </pre>
+            </div>
+            <div>
+              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+                Tailored {activeTab === 'cv' ? 'CV' : 'cover letter'} — review &amp; edit
+              </p>
+              <textarea
+                value={currentText}
+                onChange={(e) => handleEdit(e.target.value)}
+                rows={16}
+                aria-label={activeTab === 'cv' ? 'Tailored CV' : 'Tailored cover letter'}
+                className="h-96 w-full resize-y rounded-xl border border-white/10 bg-navy-800/50 p-4 font-mono text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-400/50"
+              />
+            </div>
           </div>
-          <div className="flex gap-3">
-            <Button variant="outline" onClick={() => navigator.clipboard.writeText(activeTab === 'cv' ? result.cv : result.coverLetter)}>
-              Copy to Clipboard
+
+          <div className="flex flex-wrap items-center gap-3">
+            <Button onClick={() => setApproved(true)} disabled={approved}>
+              {approved ? 'Document approved' : 'Approve document'}
             </Button>
-            <Button variant="outline">
-              Save to CV Vault
+            <Button variant="outline" onClick={handleCopy}>
+              Copy to clipboard
+            </Button>
+            <Button variant="outline" onClick={handleGenerate} disabled={isProcessing}>
+              Regenerate
             </Button>
           </div>
+          <p className="text-xs text-slate-500">
+            Review every line against your master profile before you use it. Nothing is sent
+            or submitted automatically; saving approved versions to the CV Vault arrives with
+            the tracker (Phase 2).
+          </p>
         </div>
       )}
     </div>

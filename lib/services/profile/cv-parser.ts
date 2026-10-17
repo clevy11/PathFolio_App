@@ -1,39 +1,76 @@
 import pdfParse from 'pdf-parse';
 import { extractRawText } from 'mammoth';
-import { Document, Packer, Paragraph, TextRun } from 'docx';
+
+export interface ParsedExperience {
+  company: string;
+  role: string;
+  startDate: string;
+  endDate: string;
+  description: string;
+  technologies?: string[];
+}
+
+export interface ParsedEducation {
+  institution: string;
+  degree: string;
+  field: string;
+  startDate: string;
+  endDate: string;
+  description?: string;
+}
+
+export interface ParsedProject {
+  name: string;
+  description: string;
+  link?: string;
+  technologies?: string[];
+}
+
+export interface ParsedCVSections {
+  name?: string;
+  email?: string;
+  phone?: string;
+  summary?: string;
+  skills?: string[];
+  links?: Record<string, string>;
+  education?: ParsedEducation[];
+  experience?: ParsedExperience[];
+  projects?: ParsedProject[];
+}
 
 export interface ParsedCV {
   rawText: string;
-  sections: {
-    name?: string;
-    email?: string;
-    phone?: string;
-    summary?: string;
-    skills?: string[];
-    education?: Array<{
-      institution: string;
-      degree: string;
-      field: string;
-      startDate: string;
-      endDate: string;
-      description?: string;
-    }>;
-    experience?: Array<{
-      company: string;
-      role: string;
-      startDate: string;
-      endDate: string;
-      description: string;
-      technologies?: string[];
-    }>;
-    projects?: Array<{
-      name: string;
-      description: string;
-      link?: string;
-      technologies?: string[];
-    }>;
-  };
+  sections: ParsedCVSections;
 }
+
+type SectionName = 'summary' | 'experience' | 'education' | 'skills' | 'projects';
+
+const SECTION_KEYWORDS: Record<SectionName, string[]> = {
+  summary: ['summary', 'profile', 'objective', 'about', 'professional summary'],
+  experience: ['professional experience', 'work experience', 'experience', 'employment', 'career'],
+  education: ['education', 'academic background', 'academics'],
+  skills: ['skills', 'technical skills', 'core competencies', 'technologies', 'tech stack'],
+  projects: ['projects', 'personal projects', 'selected projects', 'portfolio'],
+};
+
+// Headings we do not extract, but which end the section before them so their
+// content does not bleed into the previous section.
+const IGNORED_SECTIONS = [
+  'certificates',
+  'certifications',
+  'languages',
+  'declaration',
+  'declaration & signature',
+  'references',
+  'awards',
+  'achievements',
+  'interests',
+  'hobbies',
+  'publications',
+  'volunteering',
+  'activities',
+  'additional information',
+];
 
 export async function parseCV(buffer: Buffer, mimeType: string): Promise<ParsedCV> {
   let rawText = '';
@@ -52,8 +89,7 @@ export async function parseCV(buffer: Buffer, mimeType: string): Promise<ParsedC
       throw new Error(`Unsupported file type: ${mimeType}`);
   }
 
-  const sections = extractSections(rawText);
-  return { rawText, sections };
+  return { rawText, sections: parseCVText(rawText) };
 }
 
 async function parsePDF(buffer: Buffer): Promise<string> {
@@ -66,123 +102,247 @@ async function parseDOCX(buffer: Buffer): Promise<string> {
   return result.value;
 }
 
-function extractSections(text: string): ParsedCV['sections'] {
-  const sections: ParsedCV['sections'] = {};
+export function parseCVText(text: string): ParsedCVSections {
+  const lines = text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
 
-  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  const sections: ParsedCVSections = {};
 
-  const emailMatch = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
-  if (emailMatch) sections.email = emailMatch[0];
+  const { email, phone, links } = extractContact(text);
+  if (email) sections.email = email;
+  if (phone) sections.phone = phone;
+  if (Object.keys(links).length > 0) sections.links = links;
 
-  const phoneMatch = text.match(/[\+]?[(]?[0-9]{1,3}[)]?[-\s\.]?[(]?[0-9]{1,3}[)]?[-\s\.]?[0-9]{4,6}/);
-  if (phoneMatch) sections.phone = phoneMatch[0];
+  const name = extractName(lines);
+  if (name) sections.name = name;
 
-  const nameLine = lines[0];
-  if (nameLine && nameLine.length < 60 && !nameLine.includes('@')) {
-    sections.name = nameLine;
+  const grouped = splitSections(lines);
+
+  if (grouped.summary) sections.summary = grouped.summary.join(' ').trim();
+  if (grouped.skills) {
+    const skills = parseSkills(grouped.skills);
+    if (skills.length > 0) sections.skills = skills;
   }
-
-  const lowerText = text.toLowerCase();
-
-  const summaryIdx = findSectionIndex(lines, ['summary', 'profile', 'objective', 'about']);
-  if (summaryIdx !== -1) {
-    sections.summary = extractSectionContent(lines, summaryIdx);
+  if (grouped.experience) {
+    const entries = parseExperience(grouped.experience);
+    if (entries.length > 0) sections.experience = entries;
   }
-
-  const skillsIdx = findSectionIndex(lines, ['skills', 'technologies', 'tech stack', 'competencies']);
-  if (skillsIdx !== -1) {
-    sections.skills = extractSkills(lines, skillsIdx);
+  if (grouped.education) {
+    const entries = parseEducation(grouped.education);
+    if (entries.length > 0) sections.education = entries;
   }
-
-  const educationIdx = findSectionIndex(lines, ['education', 'academic', 'degrees']);
-  if (educationIdx !== -1) {
-    sections.education = extractEducation(lines, educationIdx);
-  }
-
-  const experienceIdx = findSectionIndex(lines, ['experience', 'work', 'employment', 'career', 'professional']);
-  if (experienceIdx !== -1) {
-    sections.experience = extractExperience(lines, experienceIdx);
-  }
-
-  const projectsIdx = findSectionIndex(lines, ['projects', 'portfolio', 'personal projects']);
-  if (projectsIdx !== -1) {
-    sections.projects = extractProjects(lines, projectsIdx);
+  if (grouped.projects) {
+    const entries = parseProjects(grouped.projects);
+    if (entries.length > 0) sections.projects = entries;
   }
 
   return sections;
 }
 
-function findSectionIndex(lines: string[], keywords: string[]): number {
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].toLowerCase();
-    if (keywords.some(k => line === k || line.startsWith(k + ':') || line.startsWith(k + ' '))) {
-      return i;
+function matchSection(line: string): SectionName | null {
+  if (line.length > 40) return null;
+  const lower = line.toLowerCase().replace(/[:•]+$/, '').trim();
+  if (lower.split(/\s+/).length > 4) return null;
+
+  for (const [name, keywords] of Object.entries(SECTION_KEYWORDS) as [SectionName, string[]][]) {
+    if (keywords.some((keyword) => lower === keyword || lower.startsWith(`${keyword}:`))) return name;
+  }
+  return null;
+}
+
+function isIgnoredHeading(line: string): boolean {
+  const lower = line.toLowerCase().replace(/[:•]+$/, '').trim();
+  return IGNORED_SECTIONS.includes(lower);
+}
+
+function splitSections(lines: string[]): Partial<Record<SectionName, string[]>> {
+  const result: Partial<Record<SectionName, string[]>> = {};
+  let current: SectionName | null = null;
+
+  for (const line of lines) {
+    const section = matchSection(line);
+    if (section) {
+      current = section;
+      result[current] = result[current] ?? [];
+      continue;
     }
+    if (isIgnoredHeading(line)) {
+      current = null;
+      continue;
+    }
+    if (current) result[current]!.push(line);
   }
-  return -1;
+
+  return result;
 }
 
-function extractSectionContent(lines: string[], startIdx: number): string {
-  const content: string[] = [];
-  for (let i = startIdx + 1; i < lines.length; i++) {
-    if (isSectionHeader(lines[i])) break;
-    content.push(lines[i]);
+export function parseDateRange(text: string): { startDate: string; endDate: string } {
+  const range = text.match(
+    /([A-Za-z]+\.?\s+\d{4}|\d{4})\s*[–—-]\s*([A-Za-z]+\.?\s+\d{4}|\d{4}|present|current)/i
+  );
+  if (range) {
+    return { startDate: range[1].trim(), endDate: range[2].trim() };
   }
-  return content.join(' ').trim();
+  const single = text.match(/[A-Za-z]+\.?\s+\d{4}|\b\d{4}\b/);
+  if (single) return { startDate: single[0].trim(), endDate: '' };
+  return { startDate: '', endDate: '' };
 }
 
-function isSectionHeader(line: string): boolean {
-  const lower = line.toLowerCase();
-  const headers = ['summary', 'profile', 'objective', 'about', 'skills', 'technologies', 'tech stack', 'competencies', 'education', 'academic', 'degrees', 'experience', 'work', 'employment', 'career', 'professional', 'projects', 'portfolio'];
-  return headers.some(h => lower === h || lower.startsWith(h + ':') || lower.startsWith(h + ' '));
+function extractContact(text: string): { email?: string; phone?: string; links: Record<string, string> } {
+  const links: Record<string, string> = {};
+
+  const email = text.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/)?.[0];
+
+  const phone =
+    text.match(/\+\d[\d\s().-]{7,}\d/)?.[0].trim() ??
+    text.match(/\b\d{3}[\s.-]\d{3}[\s.-]\d{3,4}\b/)?.[0].trim();
+
+  const linkedin = text.match(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/[^\s•|]+/i)?.[0];
+  if (linkedin) links.linkedin = withProtocol(linkedin);
+
+  const github = text.match(/(?:https?:\/\/)?(?:www\.)?github\.com\/[^\s•|]+/i)?.[0];
+  if (github) links.github = withProtocol(github);
+
+  return { email, phone, links };
 }
 
-function extractSkills(lines: string[], startIdx: number): string[] {
-  const content = extractSectionContent(lines, startIdx);
-  return content.split(/[,;\n]/).map(s => s.trim()).filter(Boolean);
+function withProtocol(url: string): string {
+  const cleaned = url.replace(/[.,;]+$/, '');
+  return /^https?:\/\//i.test(cleaned) ? cleaned : `https://${cleaned}`;
 }
 
-function extractEducation(lines: string[], startIdx: number): ParsedCV['sections']['education'] {
-  const content = extractSectionContent(lines, startIdx);
-  const entries = content.split(/\n\s*\n/).filter(Boolean);
-  return entries.map(e => {
-    const lines = e.split('\n').map(l => l.trim()).filter(Boolean);
+function extractName(lines: string[]): string | undefined {
+  const first = lines[0];
+  if (!first) return undefined;
+  if (first.length > 60 || first.includes('@') || /\d/.test(first)) return undefined;
+  if (matchSection(first)) return undefined;
+  if (/curriculum vitae|^resume$/i.test(first)) return undefined;
+  if (first.split(/\s+/).length > 5) return undefined;
+  return first;
+}
+
+function parseSkills(lines: string[]): string[] {
+  const skills = lines
+    .flatMap((line) => line.split(/[,;]/))
+    .map((skill) => skill.trim())
+    .filter(Boolean);
+  return Array.from(new Set(skills));
+}
+
+function splitHeader(header: string): { role: string; company: string } {
+  const parts = header.split('|').map((part) => part.trim());
+  if (parts.length >= 2) return { role: parts[0], company: parts.slice(1).join(' ') };
+  return { role: header.trim(), company: '' };
+}
+
+function hasSeparator(line: string): boolean {
+  return line.includes('|');
+}
+
+function entryStarts(lines: string[], isStart: (line: string, index: number) => boolean): number[] {
+  const starts: number[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (isStart(lines[i], i)) starts.push(i);
+  }
+  return starts;
+}
+
+function parseExperience(lines: string[]): ParsedExperience[] {
+  let starts = entryStarts(lines, (line) => hasSeparator(line));
+  if (starts.length === 0) {
+    starts = entryStarts(
+      lines,
+      (line, index) => !parseDateRange(line).startDate && Boolean(parseDateRange(lines[index + 1] ?? '').startDate)
+    );
+  }
+  if (starts.length === 0) starts = [0];
+
+  return starts.map((startIdx, position) => {
+    const endIdx = position + 1 < starts.length ? starts[position + 1] : lines.length;
+    const entryLines = lines.slice(startIdx, endIdx);
+    const { role, company } = splitHeader(entryLines[0]);
+    const dateLineIdx = entryLines.findIndex((line, index) => index > 0 && parseDateRange(line).startDate);
+    const dates = dateLineIdx >= 0 ? parseDateRange(entryLines[dateLineIdx]) : { startDate: '', endDate: '' };
+    const bullets = entryLines.filter((_, index) => index !== 0 && index !== dateLineIdx);
+
     return {
-      institution: lines[0] || '',
-      degree: lines[1] || '',
-      field: lines[2] || '',
-      startDate: '',
-      endDate: '',
-      description: lines.slice(3).join(' '),
+      role,
+      company,
+      startDate: dates.startDate,
+      endDate: dates.endDate,
+      description: bullets.join(' ').trim(),
     };
   });
 }
 
-function extractExperience(lines: string[], startIdx: number): ParsedCV['sections']['experience'] {
-  const content = extractSectionContent(lines, startIdx);
-  const entries = content.split(/\n\s*\n/).filter(Boolean);
-  return entries.map(e => {
-    const lines = e.split('\n').map(l => l.trim()).filter(Boolean);
-    return {
-      company: lines[0] || '',
-      role: lines[1] || '',
-      startDate: '',
-      endDate: '',
-      description: lines.slice(2).join(' '),
-      technologies: [],
-    };
-  });
+function splitDegree(line: string): { degree: string; field: string; description: string } {
+  if (!line) return { degree: '', field: '', description: '' };
+  const [degreePart, ...rest] = line.split(/\s+in\s+/i);
+  const remainder = rest.join(' in ');
+  const [field, ...honours] = remainder.split(/\s+[—–-]\s+/);
+  return {
+    degree: degreePart.trim(),
+    field: (field ?? '').trim(),
+    description: honours.join(' ').trim(),
+  };
 }
 
-function extractProjects(lines: string[], startIdx: number): ParsedCV['sections']['projects'] {
-  const content = extractSectionContent(lines, startIdx);
-  const entries = content.split(/\n\s*\n/).filter(Boolean);
-  return entries.map(e => {
-    const lines = e.split('\n').map(l => l.trim()).filter(Boolean);
+function parseEducation(lines: string[]): ParsedEducation[] {
+  const entries: ParsedEducation[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const isInstitutionLine = line.includes('•') || Boolean(parseDateRange(line).startDate);
+    if (!isInstitutionLine) continue;
+
+    const degreeLine = i > 0 ? lines[i - 1] : '';
+    const parts = line.split('•').map((part) => part.trim());
+    const institution = parts[0] ?? '';
+    const dates = parseDateRange(parts.slice(1).join(' '));
+    const { degree, field, description } = splitDegree(degreeLine);
+
+    entries.push({
+      institution,
+      degree,
+      field,
+      startDate: dates.startDate,
+      endDate: dates.endDate,
+      ...(description ? { description } : {}),
+    });
+  }
+
+  return entries;
+}
+
+function parseProjects(lines: string[]): ParsedProject[] {
+  const starts = entryStarts(lines, (line) => !line.endsWith('.'));
+  if (starts.length === 0) return [];
+
+  return starts.map((startIdx, position) => {
+    const endIdx = position + 1 < starts.length ? starts[position + 1] : lines.length;
+    const entryLines = lines.slice(startIdx, endIdx);
+    const header = entryLines[0];
+
+    let technologies: string[] = [];
+    let headerText = header;
+    const techMatch = header.match(/\(([^)]*)\)\s*$/);
+    if (techMatch) {
+      technologies = techMatch[1]
+        .split(',')
+        .map((tech) => tech.trim())
+        .filter(Boolean);
+      headerText = header.slice(0, techMatch.index).trim();
+    }
+
+    const [namePart, ...descriptorParts] = headerText.split(/\s+[—–-]\s+/);
+    const description = [descriptorParts.join(' ').trim(), ...entryLines.slice(1)].filter(Boolean).join(' ').trim();
+
     return {
-      name: lines[0] || '',
-      description: lines.slice(1).join(' '),
-      technologies: [],
+      name: namePart.trim(),
+      description,
+      ...(technologies.length > 0 ? { technologies } : {}),
     };
   });
 }

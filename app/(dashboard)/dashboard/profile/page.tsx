@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils/cn';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { SavedAnswersEditor } from '@/components/profile/saved-answers-editor';
 
 interface ProfileData {
   name: string;
@@ -34,6 +35,7 @@ interface ProfileData {
     link: string;
     technologies: string[];
   }>;
+  savedAnswers: Record<string, string>;
 }
 
 const initialProfile: ProfileData = {
@@ -46,14 +48,27 @@ const initialProfile: ProfileData = {
   education: [],
   experience: [],
   projects: [],
+  savedAnswers: {},
 };
 
-export function ProfilePage() {
+function renderCvValue(value: unknown): string {
+  if (value === null || value === undefined || value === '') return '—';
+  if (Array.isArray(value)) {
+    if (value.length === 0) return '—';
+    if (typeof value[0] === 'object' && value[0] !== null) return `${value.length} entries`;
+    return value.join(', ');
+  }
+  if (typeof value === 'object') return `${Object.keys(value).length} items`;
+  return String(value);
+}
+
+function ProfilePage() {
   const [profile, setProfile] = useState<ProfileData>(initialProfile);
-  const [activeTab, setActiveTab] = useState<'overview' | 'skills' | 'experience' | 'education' | 'projects' | 'links'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'skills' | 'experience' | 'education' | 'projects' | 'links' | 'answers' | 'Upload_CV'>('overview');
   const [isSaving, setIsSaving] = useState(false);
   const [cvUploading, setCvUploading] = useState(false);
-  const [cvParsed, setCvParsed] = useState<Record<string, string | string[] | null> | null>(null);
+  const [cvParsed, setCvParsed] = useState<Record<string, unknown> | null>(null);
+  const [cvSource, setCvSource] = useState<'ai' | 'heuristic' | null>(null);
   const [showCvPreview, setShowCvPreview] = useState(false);
 
   useEffect(() => {
@@ -94,6 +109,7 @@ export function ProfilePage() {
       const data = await res.json();
       if (data.suggestedProfile) {
         setCvParsed(data.suggestedProfile);
+        setCvSource(data.source ?? null);
         setShowCvPreview(true);
       }
     } catch (error) {
@@ -105,7 +121,7 @@ export function ProfilePage() {
 
   const applyCvData = () => {
     if (cvParsed) {
-      setProfile(prev => ({ ...prev, ...cvParsed }));
+      setProfile(prev => ({ ...prev, ...(cvParsed as Partial<ProfileData>) }));
       setShowCvPreview(false);
     }
   };
@@ -117,6 +133,8 @@ export function ProfilePage() {
     { id: 'education', label: 'Education', icon: 'graduation-cap' },
     { id: 'projects', label: 'Projects', icon: 'folder-open' },
     { id: 'links', label: 'Links', icon: 'link' },
+    { id: 'answers', label: 'Saved Answers', icon: 'bookmark' },
+    { id: 'Upload_CV', label: 'Upload CV', icon: 'file-upload' },
   ];
 
   return (
@@ -143,11 +161,16 @@ export function ProfilePage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
+            {cvSource === 'heuristic' && (
+              <p className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-2 text-xs text-amber-400">
+                AI extraction was unavailable, so an offline parser filled these fields. Review them before applying.
+              </p>
+            )}
             <div className="grid grid-cols-2 gap-2 text-sm">
               {Object.entries(cvParsed).map(([key, value]) => (
                 <div key={key} className="bg-white/5 p-2 rounded">
                   <p className="text-slate-400 text-xs">{key}</p>
-                  <p className="font-mono truncate">{Array.isArray(value) ? value.join(', ') : value}</p>
+                  <p className="truncate font-mono">{renderCvValue(value)}</p>
                 </div>
               ))}
             </div>
@@ -272,14 +295,21 @@ export function ProfilePage() {
             </div>
           )}
 
-          <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between">
-            <div className="flex gap-2">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="file" accept=".pdf,.docx,.txt" onChange={(e: React.ChangeEvent<HTMLInputElement>) => e.target.files?.[0] && handleCvUpload(e.target.files[0])} className="sr-only" />
+          {activeTab === 'answers' && (
+            <SavedAnswersEditor
+              answers={profile.savedAnswers}
+              onChange={savedAnswers => setProfile(p => ({ ...p, savedAnswers }))}
+            />
+          )}
+          {activeTab !== 'Upload_CV' && (
+            <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between">
+              <div className="flex gap-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="file" accept=".pdf,.docx,.txt" onChange={(e: React.ChangeEvent<HTMLInputElement>) => e.target.files?.[0] && handleCvUpload(e.target.files[0])} className="sr-only" />
                 <Button variant="outline" disabled={cvUploading}>{cvUploading ? 'Uploading...' : 'Upload CV'}</Button>
               </label>
             </div>
-          </div>
+          </div>)}
         </CardContent>
       </Card>
     </div>

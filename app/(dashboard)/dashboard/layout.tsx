@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils/cn';
 const navigation = [
   { name: 'Mission Control', href: '/dashboard', icon: 'squares-four' },
   { name: 'Applications', href: '/dashboard/applications', icon: 'briefcase' },
-  { name: 'CV Vault', href: '/profile', icon: 'file-text' },
+  { name: 'CV Vault', href: '/dashboard/profile', icon: 'file-text' },
   { name: 'Interviews', href: '/dashboard/interviews', icon: 'calendar-blank' },
   { name: 'Analytics', href: '/dashboard/analytics', icon: 'chart-line-up' },
 ];

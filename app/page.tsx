@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function HomePage() {
   return (
@@ -124,7 +124,7 @@ export default function HomePage() {
 
       <footer className="border-t py-8 px-4">
         <div className="container mx-auto max-w-5xl text-center text-sm text-muted-foreground">
-          <p>Pathfolio — Built with Next.js 15, React 19, TypeScript, Tailwind, Drizzle, OpenRouter</p>
+          <p>Pathfolio — Built with Next.js 15, React 18, TypeScript, Tailwind, Drizzle, OpenRouter</p>
           <p className="mt-2">
             <a href="https://github.com/clevy11/PathFolio_App.git" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
               GitHub Repository

@@ -53,7 +53,7 @@ export async function searchJooble(
     company: job.companyId || 'Not specified',
     location: job.location || 'Not specified',
     remote: /remote/i.test(job.location ?? ''),
-    roleType: typeMap[job.type?.toLowerCase() ?? ''] ?? 'unknown',
+    roleType: typeMap[job.type?.toLowerCase().replace(/[-_]/g, ' ') ?? ''] ?? 'unknown',
     url: job.link,
     description: (job.snippet ?? '').replace(/<[^>]*>/g, ' ').slice(0, 2000),
     postedAt: job.posted || undefined,

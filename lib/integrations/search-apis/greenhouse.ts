@@ -1,4 +1,6 @@
 import type { JobPosting, JobSearchParams } from './types';
+import { inferRoleType } from './role-type';
+import { matchesQuery } from './query-match';
 
 const DEFAULT_BOARDS = ['stripe', 'github', 'figma', 'datadog'];
 
@@ -19,7 +21,7 @@ export async function searchGreenhouse(
   params: JobSearchParams,
   boards: string[] = DEFAULT_BOARDS
 ): Promise<JobPosting[]> {
-  const query = params.query.toLowerCase();
+  const query = params.query;
   const limit = params.limit ?? 20;
 
   const results = await Promise.all(
@@ -32,7 +34,9 @@ export async function searchGreenhouse(
       }
       const data = (await response.json()) as { jobs?: GreenhouseJob[] };
       return (data.jobs ?? [])
-        .filter((job) => job.title.toLowerCase().includes(query))
+        .filter((job) =>
+          matchesQuery(`${job.title} ${(job.departments ?? []).map((d) => d.name).join(' ')}`, query)
+        )
         .map((job): JobPosting => ({
           id: `greenhouse:${board}:${job.id}`,
           source: 'greenhouse',
@@ -40,7 +44,7 @@ export async function searchGreenhouse(
           company: board,
           location: job.location?.name || 'Not specified',
           remote: /remote/i.test(job.location?.name ?? ''),
-          roleType: 'unknown',
+          roleType: inferRoleType(job.title, job.departments?.map((d) => d.name).join(' ')),
           url: job.absolute_url,
           description: '',
           postedAt: job.updated_at,

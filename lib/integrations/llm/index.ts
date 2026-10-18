@@ -19,9 +19,10 @@ export interface LLMResponse {
 }
 
 const MODEL_FALLBACK_CHAIN = [
+  'nvidia/nemotron-3-ultra-550b-a55b:free',
   'nvidia/nemotron-3-super-120b-a12b:free',
+  'dots-studio/dots-3-note-preview:free',
   'poolside/laguna-s-2.1:free',
-  'google/gemma-4-31b-it:free',
 ];
 
 const DEFAULT_MODEL = process.env.OPENROUTER_MODEL || MODEL_FALLBACK_CHAIN[0];

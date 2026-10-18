@@ -1,4 +1,12 @@
-export type JobSource = 'remotive' | 'greenhouse' | 'lever' | 'adzuna' | 'jooble';
+export type JobSource =
+  | 'remotive'
+  | 'greenhouse'
+  | 'lever'
+  | 'adzuna'
+  | 'jooble'
+  | 'jobicy'
+  | 'jobwebrwanda'
+  | 'opportunityrw';
 
 export type RoleType = 'full-time' | 'contract' | 'part-time' | 'internship' | 'temporary' | 'unknown';
 
@@ -13,6 +21,8 @@ export interface JobPosting {
   url: string;
   description: string;
   postedAt?: string;
+  /** ISO closing date, only when the posting states one. */
+  deadline?: string;
 }
 
 export interface JobSearchParams {

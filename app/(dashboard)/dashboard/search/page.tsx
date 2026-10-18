@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils/cn';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { ApplicationKit } from '@/components/search/application-kit';
 
 interface ScoredJob {
   id: string;
@@ -14,7 +15,9 @@ interface ScoredJob {
   remote: boolean;
   roleType: string;
   url: string;
+  description?: string;
   postedAt?: string;
+  deadline?: string;
   match: { score: number; matchedSkills: string[]; missingSkills: string[] };
 }
 
@@ -26,17 +29,27 @@ interface SourceStatus {
   error?: string;
 }
 
+interface Interpreted {
+  query: string;
+  region: string;
+  includeClosed: boolean;
+  locationFromQuery: boolean;
+}
+
 const regionOptions = [
+  { value: 'rwanda', label: 'Rwanda' },
+  { value: 'africa', label: 'Africa' },
+  { value: 'remote', label: 'Remote (anywhere)' },
   { value: 'any', label: 'Any region' },
-  { value: 'remote', label: 'Remote only' },
   { value: 'united-states', label: 'United States' },
   { value: 'europe', label: 'Europe' },
   { value: 'united-kingdom', label: 'United Kingdom' },
   { value: 'canada', label: 'Canada' },
-  { value: 'africa', label: 'Africa' },
   { value: 'asia', label: 'Asia' },
   { value: 'oceania', label: 'Oceania' },
 ];
+
+const regionLabels: Record<string, string> = Object.fromEntries(regionOptions.map((opt) => [opt.value, opt.label]));
 
 const roleOptions = [
   { value: 'any', label: 'Any role type' },
@@ -45,6 +58,13 @@ const roleOptions = [
   { value: 'part-time', label: 'Part-time' },
   { value: 'internship', label: 'Internship' },
   { value: 'temporary', label: 'Temporary' },
+];
+
+const quickSearches = [
+  { label: 'developer in Rwanda', query: 'developer in Rwanda', region: 'rwanda' },
+  { label: 'software engineer in Kigali', query: 'software engineer in Kigali', region: 'rwanda' },
+  { label: 'data analyst in Africa', query: 'data analyst in Africa', region: 'africa' },
+  { label: 'remote developer', query: 'developer', region: 'remote' },
 ];
 
 function scoreColor(score: number): string {
@@ -61,26 +81,37 @@ function scoreBar(score: number): string {
 
 export default function JobSearchPage() {
   const [query, setQuery] = useState('');
-  const [region, setRegion] = useState('any');
+  const [region, setRegion] = useState('rwanda');
   const [roleType, setRoleType] = useState('any');
   const [jobs, setJobs] = useState<ScoredJob[]>([]);
   const [sources, setSources] = useState<SourceStatus[]>([]);
+  const [interpreted, setInterpreted] = useState<Interpreted | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
+  const [includeClosed, setIncludeClosed] = useState(false);
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!query.trim()) return;
+  const runSearch = async (
+    term: string,
+    nextRegion = region,
+    nextRoleType = roleType,
+    nextIncludeClosed = includeClosed
+  ) => {
+    if (!term.trim()) return;
+    const params = new URLSearchParams({ q: term.trim(), region: nextRegion, roleType: nextRoleType });
+    if (nextIncludeClosed) params.set('includeClosed', 'true');
+    window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`);
     setLoading(true);
     setError(null);
     try {
-      const params = new URLSearchParams({ q: query.trim(), region, roleType });
+      // Sending the raw phrase lets the API read a location out of it
+      // ("backend developer in Rwanda") and fill the region.
       const res = await fetch(`/api/jobs/search?${params.toString()}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Search failed');
       setJobs(data.jobs ?? []);
       setSources(data.sources ?? []);
+      setInterpreted(data.interpreted ?? null);
       setSearched(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Search failed');
@@ -89,6 +120,27 @@ export default function JobSearchPage() {
     }
   };
 
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await runSearch(query);
+  };
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const initialQuery = params.get('q');
+    if (!initialQuery) return;
+    const initialRegion = params.get('region') ?? 'rwanda';
+    const initialRoleType = params.get('roleType') ?? 'any';
+    const initialIncludeClosed = params.get('includeClosed') === 'true';
+    setQuery(initialQuery);
+    setRegion(initialRegion);
+    setRoleType(initialRoleType);
+    setIncludeClosed(initialIncludeClosed);
+    runSearch(initialQuery, initialRegion, initialRoleType, initialIncludeClosed);
+    // Only on mount: later searches update the URL themselves.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const failedSources = sources.filter((s) => s.used && !s.ok);
 
   return (
@@ -96,7 +148,8 @@ export default function JobSearchPage() {
       <div>
         <h1 className="font-display text-2xl font-bold">Job Search</h1>
         <p className="text-sm text-slate-500">
-          Search public job boards, scored against your master profile (US-03, US-04)
+          Say the role and the place — Pathfolio searches Rwanda, Africa and remote boards, then scores each job
+          against your master profile (US-03, US-04).
         </p>
       </div>
 
@@ -106,7 +159,7 @@ export default function JobSearchPage() {
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search keywords, e.g. React, backend, data engineer"
+              placeholder="e.g. backend developer in Rwanda"
               className="w-full bg-navy-800/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/50"
             />
             <div className="flex flex-wrap gap-3">
@@ -132,6 +185,34 @@ export default function JobSearchPage() {
                 {loading ? 'Searching…' : 'Search jobs'}
               </Button>
             </div>
+            <label className="flex items-center gap-2 text-xs text-slate-400">
+              <input
+                type="checkbox"
+                checked={includeClosed}
+                onChange={(e) => {
+                  setIncludeClosed(e.target.checked);
+                  if (searched) runSearch(query, region, roleType, e.target.checked);
+                }}
+                className="h-4 w-4 rounded border-white/20 bg-navy-800/50 accent-emerald-500"
+              />
+              Show jobs past their deadline (closed jobs are hidden by default)
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {quickSearches.map((term) => (
+                <button
+                  key={term.label}
+                  type="button"
+                  onClick={() => {
+                    setQuery(term.query);
+                    setRegion(term.region);
+                    runSearch(term.query, term.region);
+                  }}
+                  className="rounded-full border border-white/10 px-3 py-1 text-xs text-slate-400 transition-colors hover:border-emerald-400/40 hover:text-emerald-400"
+                >
+                  {term.label}
+                </button>
+              ))}
+            </div>
           </form>
 
           {sources.length > 0 && (
@@ -141,7 +222,11 @@ export default function JobSearchPage() {
                   key={s.source}
                   className={cn(
                     'px-2 py-1 rounded-lg border',
-                    s.used && s.ok ? 'border-emerald-500/30 text-emerald-400 bg-emerald-500/5' : 'border-white/10 text-slate-500'
+                    s.used && s.ok
+                      ? 'border-emerald-500/30 text-emerald-400 bg-emerald-500/5'
+                      : s.used
+                        ? 'border-rose-500/30 text-rose-400 bg-rose-500/5'
+                        : 'border-white/10 text-slate-500'
                   )}
                   title={s.error ?? `${s.count} results`}
                 >
@@ -158,12 +243,32 @@ export default function JobSearchPage() {
       )}
       {failedSources.length > 0 && !error && (
         <p className="text-xs text-amber-400">
-          Some sources failed or are unconfigured: {failedSources.map((s) => s.source).join(', ')} — showing the rest.
+          Some sources failed: {failedSources.map((s) => `${s.source} (${s.error ?? 'error'})`).join(', ')} — showing the rest.
+        </p>
+      )}
+
+      {interpreted?.locationFromQuery && (
+        <p className="text-xs text-slate-400">
+          Read from your search: <span className="text-emerald-400">{interpreted.query || 'all jobs'}</span> in{' '}
+          <span className="text-emerald-400">{regionLabels[interpreted.region] ?? interpreted.region}</span>.
+        </p>
+      )}
+
+      {searched && !loading && (
+        <p className="text-xs text-slate-500">
+          {jobs.length} {jobs.length === 1 ? 'job' : 'jobs'} · region {regionLabels[region] ?? region}
+          {roleType !== 'any' ? ` · ${roleType}` : ''}
         </p>
       )}
 
       {searched && !loading && jobs.length === 0 && !error && (
-        <p className="text-sm text-slate-500">No jobs found for these filters. Try a broader query or region.</p>
+        <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-slate-400">
+          <p>No jobs matched those filters.</p>
+          <p className="mt-1 text-xs text-slate-500">
+            Try the Africa region, a broader role word (developer, engineer, analyst), or the remote filter — African
+            employers post far fewer roles than US boards.
+          </p>
+        </div>
       )}
 
       <div className="space-y-4">
@@ -182,7 +287,12 @@ export default function JobSearchPage() {
                   <p className="text-sm text-slate-400 mt-1">
                     {job.company} · {job.location}
                     {job.roleType !== 'unknown' && <> · {job.roleType}</>}
-                    {job.postedAt && <> · {job.postedAt.slice(0, 10)}</>}
+                    {job.postedAt && <> · posted {job.postedAt.slice(0, 10)}</>}
+                    {job.deadline && (
+                      <> · <span className={cn('font-medium', new Date(job.deadline) < new Date() ? 'text-rose-400' : 'text-emerald-400')}>
+                        {new Date(job.deadline) < new Date() ? 'closed' : 'closes'} {job.deadline.slice(0, 10)}
+                      </span></>
+                    )}
                   </p>
                 </div>
                 <div className="text-right shrink-0">
@@ -222,11 +332,22 @@ export default function JobSearchPage() {
                 </div>
               )}
 
-              <div className="mt-4 flex justify-end">
+              <div className="mt-4 flex justify-end gap-2">
                 <a href={job.url} target="_blank" rel="noopener noreferrer">
                   <Button variant="outline" size="sm">View posting</Button>
                 </a>
               </div>
+
+              <ApplicationKit
+                job={{
+                  title: job.title,
+                  company: job.company,
+                  url: job.url,
+                  location: job.location,
+                  description: job.description,
+                  source: job.source,
+                }}
+              />
             </CardContent>
           </Card>
         ))}

@@ -69,6 +69,7 @@ function ProfilePage() {
   const [cvUploading, setCvUploading] = useState(false);
   const [cvParsed, setCvParsed] = useState<Record<string, unknown> | null>(null);
   const [cvSource, setCvSource] = useState<'ai' | 'heuristic' | null>(null);
+  const [cvError, setCvError] = useState<string | null>(null);
   const [showCvPreview, setShowCvPreview] = useState(false);
 
   useEffect(() => {
@@ -102,6 +103,8 @@ function ProfilePage() {
 
   const handleCvUpload = async (file: File) => {
     setCvUploading(true);
+    setCvError(null);
+    setShowCvPreview(false);
     const formData = new FormData();
     formData.append('file', file);
     try {
@@ -109,7 +112,11 @@ function ProfilePage() {
         method: 'POST',
         body: formData,
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setCvError(data.error ?? `Upload failed (${res.status})`);
+        return;
+      }
       if (data.suggestedProfile) {
         setCvParsed(data.suggestedProfile);
         setCvSource(data.source ?? null);
@@ -117,6 +124,7 @@ function ProfilePage() {
       }
     } catch (error) {
       console.error('CV upload failed:', error);
+      setCvError('Upload failed — check your connection and try again.');
     } finally {
       setCvUploading(false);
     }
@@ -325,6 +333,9 @@ function ProfilePage() {
                 <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
                   <div className="h-full w-1/2 bg-gradient-to-r from-emerald-500 to-azure-500 animate-pulse rounded-full" />
                 </div>
+              )}
+              {cvError && (
+                <p className="rounded-lg border border-red-500/20 bg-red-500/5 p-3 text-xs text-red-400">{cvError}</p>
               )}
               {showCvPreview && cvParsed && (
                 <p className="text-xs text-emerald-400">✓ Parsed successfully — review the preview above and click "Apply to Profile".</p>

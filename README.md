@@ -14,7 +14,7 @@ every application you send.
 ![License: MIT](https://img.shields.io/badge/License-MIT-green)
 ![AI: OpenRouter](https://img.shields.io/badge/AI-OpenRouter-6C47FF)
 
-> **Status:** pre-alpha — Phase 1 scaffolding in progress. See [TASK.md](./TASK.md).
+> **Status:** pre-alpha — profile, tracker and job search are live; email application drafting is in progress. See [TASK.md](./TASK.md).
 >
 > **Repo:** https://github.com/clevy11/PathFolio_App.git
 
@@ -33,8 +33,11 @@ repetitive application work and get things done.
 
 ## What it does
 
-**1. Find** — search jobs and school programs by region and role type, each with
-a **match score** and a list of missing skills or requirements.
+**1. Find** — describe the role and place in one box ("backend developer in
+Rwanda") and search Rwanda/Africa boards (Jobweb Rwanda, opportunity.ini.rw),
+remote feeds (Jobicy, Remotive) and company boards. Every result carries a
+**match score**, missing skills, and its stated deadline; closed postings are
+hidden unless you ask for them.
 
 **2. Tailor** — generate a tailored CV, cover letter, application email, or
 statement of purpose. Every change is shown side by side so you can accept or

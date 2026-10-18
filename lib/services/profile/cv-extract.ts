@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { callLLM, getDefaultModel } from '@/lib/integrations/llm';
 import { CV_EXTRACTION_PROMPT } from '@/lib/integrations/llm/prompts';
-import type { ParsedCVSections } from './cv-parser';
+import { hasUsableCVText, type ParsedCVSections } from './cv-parser';
 
 export interface SuggestedProfile {
   name?: string;
@@ -172,11 +172,26 @@ export function mergeSuggestedProfile(primary: SuggestedProfile, fallback: Sugge
   };
 }
 
+function hasContent(profile: SuggestedProfile): boolean {
+  return Boolean(
+    profile.name ||
+      profile.email ||
+      profile.skills?.length ||
+      profile.experience?.length ||
+      profile.education?.length ||
+      profile.projects?.length
+  );
+}
+
 export async function buildSuggestedProfile(
   rawText: string,
   sections: ParsedCVSections
 ): Promise<{ profile: SuggestedProfile; source: 'ai' | 'heuristic' }> {
   const fallback = sectionsToSuggestedProfile(sections);
+
+  if (!hasUsableCVText(rawText)) {
+    return { profile: fallback, source: 'heuristic' };
+  }
 
   try {
     const result = await callLLM({
@@ -190,10 +205,18 @@ export async function buildSuggestedProfile(
     });
 
     const parsed = extractionSchema.safeParse(parseExtractionJson(result.text));
-    if (parsed.success) {
-      return { profile: mergeSuggestedProfile(normalizeExtraction(parsed.data), fallback), source: 'ai' };
+    if (!parsed.success) {
+      console.warn(
+        'LLM CV extraction failed validation; using heuristic parser:',
+        JSON.stringify(parsed.error.issues.slice(0, 3))
+      );
+    } else {
+      const extracted = normalizeExtraction(parsed.data);
+      if (hasContent(extracted)) {
+        return { profile: mergeSuggestedProfile(extracted, fallback), source: 'ai' };
+      }
+      console.warn('LLM CV extraction returned no usable fields; using heuristic parser.');
     }
-    console.warn('LLM CV extraction failed validation; using heuristic parser:', JSON.stringify(parsed.error.issues.slice(0, 3)));
   } catch (error) {
     console.warn('LLM CV extraction failed; using heuristic parser:', error);
   }

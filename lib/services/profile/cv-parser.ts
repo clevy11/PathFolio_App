@@ -92,6 +92,14 @@ export async function parseCV(buffer: Buffer, mimeType: string): Promise<ParsedC
   return { rawText, sections: parseCVText(rawText) };
 }
 
+// A scanned/image-only PDF yields only blank lines. Below this, treat the file
+// as unreadable instead of extracting garbage from an empty string.
+export const MIN_CV_TEXT_LENGTH = 40;
+
+export function hasUsableCVText(rawText: string): boolean {
+  return rawText.replace(/\s+/g, ' ').trim().length >= MIN_CV_TEXT_LENGTH;
+}
+
 async function parsePDF(buffer: Buffer): Promise<string> {
   const data = await pdfParse(buffer);
   return data.text;

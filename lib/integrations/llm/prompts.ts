@@ -60,6 +60,46 @@ ${jobDescription}
 Return a tailored cover letter in markdown format.`,
 };
 
+export interface ApplicationEmailInput {
+  profileText: string;
+  jobTitle: string;
+  company: string;
+  jobDescription: string;
+  requirements: string[];
+}
+
+export const APPLICATION_EMAIL_PROMPT: PromptTemplate<ApplicationEmailInput> = {
+  id: 'application-email',
+  version: '1.0.0',
+  system: 'You write short job application emails using only the candidate profile.',
+  build: ({ profileText, jobTitle, company, jobDescription, requirements }) => `Write a job application email.
+
+Return ONLY a JSON object. No markdown, no code fences, no commentary:
+{ "subject": string, "body": string }
+
+Rules:
+- Use ONLY facts in the candidate profile. Never invent skills, jobs, degrees, achievements, contacts, salaries, or dates.
+- The body is plain text (no markdown), 120-180 words, addressed to the hiring team of the company.
+- Say which role is being applied for and why the candidate fits it.
+- If requirements are listed, address the most relevant ones using only profile evidence.
+- Mention that the CV is attached.
+- Sign off with the candidate's name from the profile.
+- Never write placeholders such as [Company] or [Your Name].
+- If a fact is missing from the profile, leave it out instead of guessing.
+
+Role: ${jobTitle}
+Company: ${company}
+
+Requirements stated in the posting:
+${requirements.length ? requirements.map((item) => `- ${item}`).join('\n') : 'Not stated.'}
+
+Job description:
+${jobDescription.slice(0, 4000)}
+
+Candidate profile:
+${profileText}`,
+};
+
 export const CV_EXTRACTION_PROMPT: PromptTemplate<CvExtractionInput> = {
   id: 'cv-extraction',
   version: '1.0.0',

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { parseCV } from '@/lib/services/profile/cv-parser';
+import { hasUsableCVText, parseCV } from '@/lib/services/profile/cv-parser';
 import { buildSuggestedProfile } from '@/lib/services/profile/cv-extract';
 
 export async function POST(request: NextRequest) {
@@ -34,6 +34,18 @@ export async function POST(request: NextRequest) {
 
     const buffer = Buffer.from(await file.arrayBuffer());
     const parsed = await parseCV(buffer, effectiveType);
+
+    if (!hasUsableCVText(parsed.rawText)) {
+      return NextResponse.json(
+        {
+          error:
+            'No readable text found in this file. Scanned or image-only PDFs contain pictures of text, not text. Upload a DOCX, a PDF exported from a word processor, or a TXT file.',
+          rawTextLength: parsed.rawText.length,
+        },
+        { status: 422 }
+      );
+    }
+
     const { profile: suggestedProfile, source } = await buildSuggestedProfile(
       parsed.rawText,
       parsed.sections

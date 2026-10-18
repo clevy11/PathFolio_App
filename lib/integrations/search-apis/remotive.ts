@@ -1,10 +1,11 @@
 import type { JobPosting, JobSearchParams, RoleType } from './types';
+import { inferRoleType } from './role-type';
 
 const REMOTIVE_URL = 'https://remotive.com/api/remote-jobs';
 
 const roleTypeMap: Record<string, RoleType> = {
   full_time: 'full-time',
-  full-time: 'full-time',
+  'full-time': 'full-time',
   contract: 'contract',
   part_time: 'part-time',
   'part-time': 'part-time',
@@ -49,7 +50,7 @@ export async function searchRemotive(params: JobSearchParams): Promise<JobPostin
       company: job.company_name,
       location,
       remote: /remote/i.test(location) || /remote/i.test(job.title),
-      roleType: roleTypeMap[job.job_type?.toLowerCase()] ?? 'unknown',
+      roleType: roleTypeMap[job.job_type?.toLowerCase()] ?? inferRoleType(job.title, job.job_type),
       url: job.url,
       description: stripHtml(job.description ?? '').slice(0, 2000),
       postedAt: job.publication_date,

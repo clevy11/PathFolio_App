@@ -17,10 +17,10 @@ interface AdzunaJob {
 }
 
 const contractMap: Record<string, RoleType> = {
-  'full_time': 'full-time',
-  'full_time ': 'full-time',
-  'part_time': 'part-time',
+  'full time': 'full-time',
+  'part time': 'part-time',
   contract: 'contract',
+  permanent: 'full-time',
 };
 
 /**
@@ -53,7 +53,7 @@ export async function searchAdzuna(
     company: job.company?.display_name || 'Not specified',
     location: job.location?.display_name || 'Not specified',
     remote: /remote/i.test(job.location?.display_name ?? ''),
-    roleType: contractMap[job.contract_time ?? ''] ?? 'unknown',
+    roleType: contractMap[job.contract_time?.toLowerCase().replace(/[-_]/g, ' ') ?? ''] ?? 'unknown',
     url: job.redirect_url,
     description: job.description ?? '',
     postedAt: job.created ? new Date(job.created * 1000).toISOString() : undefined,

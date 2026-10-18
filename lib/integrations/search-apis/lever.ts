@@ -1,4 +1,6 @@
 import type { JobPosting, JobSearchParams, RoleType } from './types';
+import { inferRoleType } from './role-type';
+import { matchesQuery } from './query-match';
 
 const DEFAULT_ORGS = ['spotify'];
 
@@ -28,7 +30,7 @@ export async function searchLever(
   params: JobSearchParams,
   orgs: string[] = DEFAULT_ORGS
 ): Promise<JobPosting[]> {
-  const query = params.query.toLowerCase();
+  const query = params.query;
   const limit = params.limit ?? 20;
 
   const results = await Promise.all(
@@ -46,8 +48,8 @@ export async function searchLever(
       }
       const sections = (postings ?? [])
         .filter((posting) => {
-          const haystack = `${posting.text} ${posting.categories?.team ?? ''} ${posting.categories?.department ?? ''}`.toLowerCase();
-          return haystack.includes(query);
+          const haystack = `${posting.text} ${posting.categories?.team ?? ''} ${posting.categories?.department ?? ''}`;
+          return matchesQuery(haystack, query);
         })
         .map((posting): JobPosting => {
           const location = posting.categories?.location || 'Not specified';
@@ -59,7 +61,7 @@ export async function searchLever(
             company: org,
             location,
             remote: /remote/i.test(location),
-            roleType: commitmentMap[commitment] ?? 'unknown',
+            roleType: commitmentMap[commitment] ?? inferRoleType(posting.text),
             url: posting.hostedUrl,
             description: (posting.descriptionPlain ?? '').slice(0, 2000),
             postedAt: new Date(posting.createdAt).toISOString(),

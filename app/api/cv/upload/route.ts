@@ -11,13 +11,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    const allowedTypes = [
-      'application/pdf',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'text/plain',
-    ];
+    const allowedTypes: Record<string, string> = {
+      'application/pdf': 'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain': 'text/plain',
+      pdf: 'application/pdf',
+      docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      txt: 'text/plain',
+      text: 'text/plain',
+    };
 
-    if (!allowedTypes.includes(file.type)) {
+    const mimeFromName = allowedTypes[file.name.toLowerCase().split('.').pop() ?? ''];
+    const effectiveType = allowedTypes[file.type] ?? mimeFromName;
+
+    if (!effectiveType) {
       return NextResponse.json({ error: 'File type not supported. Use PDF, DOCX, or TXT.' }, { status: 400 });
     }
 
@@ -26,7 +33,7 @@ export async function POST(request: NextRequest) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    const parsed = await parseCV(buffer, file.type);
+    const parsed = await parseCV(buffer, effectiveType);
     const { profile: suggestedProfile, source } = await buildSuggestedProfile(
       parsed.rawText,
       parsed.sections

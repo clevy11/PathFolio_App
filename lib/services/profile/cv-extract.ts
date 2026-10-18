@@ -184,7 +184,9 @@ export async function buildSuggestedProfile(
       systemPrompt: CV_EXTRACTION_PROMPT.system,
       prompt: CV_EXTRACTION_PROMPT.build({ cvText: rawText.slice(0, 16000) }),
       temperature: 0.1,
-      maxTokens: 2300,
+      // Free reasoning models spend most of the budget on hidden reasoning tokens;
+      // 2300 truncated the visible JSON (finish_reason: length) and broke validation.
+      maxTokens: 8000,
     });
 
     const parsed = extractionSchema.safeParse(parseExtractionJson(result.text));

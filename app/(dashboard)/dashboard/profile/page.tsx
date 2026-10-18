@@ -72,6 +72,9 @@ function ProfilePage() {
   const [showCvPreview, setShowCvPreview] = useState(false);
 
   useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('tab') === 'upload') {
+      setActiveTab('Upload_CV');
+    }
     fetch('/api/profile')
       .then(res => res.json())
       .then(data => {
@@ -300,6 +303,33 @@ function ProfilePage() {
               answers={profile.savedAnswers}
               onChange={savedAnswers => setProfile(p => ({ ...p, savedAnswers }))}
             />
+          )}
+          {activeTab === 'Upload_CV' && (
+            <div className="space-y-4">
+              <label className="flex flex-col items-center justify-center gap-3 border border-dashed border-white/15 rounded-xl p-10 text-center cursor-pointer hover:border-emerald-400/40 hover:bg-white/5 transition-colors">
+                <input
+                  type="file"
+                  accept=".pdf,.docx,.txt"
+                  disabled={cvUploading}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => e.target.files?.[0] && handleCvUpload(e.target.files[0])}
+                  className="sr-only"
+                />
+                <svg className="w-10 h-10 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+                <p className="font-medium">{cvUploading ? 'Uploading & extracting…' : 'Click to choose your CV file'}</p>
+                <p className="text-xs text-slate-500">PDF, DOCX or TXT (max 5MB) — you'll review the extracted fields before they fill the profile</p>
+                <Button variant="outline" disabled={cvUploading}>{cvUploading ? 'Uploading...' : 'Select CV file'}</Button>
+              </label>
+              {cvUploading && (
+                <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                  <div className="h-full w-1/2 bg-gradient-to-r from-emerald-500 to-azure-500 animate-pulse rounded-full" />
+                </div>
+              )}
+              {showCvPreview && cvParsed && (
+                <p className="text-xs text-emerald-400">✓ Parsed successfully — review the preview above and click "Apply to Profile".</p>
+              )}
+            </div>
           )}
           {activeTab !== 'Upload_CV' && (
             <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between">
